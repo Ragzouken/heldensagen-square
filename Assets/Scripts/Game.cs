@@ -51,5 +51,41 @@ public class Fleet
 
 public class Shape
 {
-    
+    public enum Cell
+    {
+        None,
+        Blank,
+        Connect,
+        Attack,
+        Block,
+    }
+
+    public Dictionary<IntVector2, Cell> cells
+        = new Dictionary<IntVector2, Cell>();
+
+    public Dictionary<IntVector2, Cell> GetOriented(IntVector2 offset,
+                                                    int rotation)
+    {
+        var oriented = new Dictionary<IntVector2, Cell>();
+
+        foreach (var pair in cells)
+        {
+            var pos = pair.Key;
+
+            for (int r = rotation; r > 0; --r)
+            {
+                int x = pos.x;
+                int y = pos.y;
+
+                pos.x =  y;
+                pos.y = -x; 
+            }
+
+            pos += offset;
+
+            oriented[pos] = pair.Value;
+        }
+
+        return oriented;
+    }
 }

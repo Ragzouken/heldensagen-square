@@ -147,6 +147,23 @@ public class MonoBehaviourPooler<TShortcut, TInstance>
         }
     }
 
+    public void SetActive(bool sort, params TShortcut[] active)
+    {
+        var collection = new HashSet<TShortcut>(active);
+
+        foreach (TShortcut shortcut in new List<TShortcut>(instances.Keys))
+        {
+            if (!collection.Contains(shortcut)) Discard(shortcut);
+        }
+
+        foreach (TShortcut shortcut in active)
+        {
+            var instance = Get(shortcut);
+
+            if (sort) instance.transform.SetAsLastSibling();
+        }
+    }
+
     public void SetActive(TShortcut active)
     {
         foreach (TShortcut shortcut in new List<TShortcut>(instances.Keys))
