@@ -49,6 +49,37 @@ public class Fleet
     }
 }
 
+public class Play
+{
+    public Shape shape;
+    public IntVector2 position;
+    public int rotation;
+
+    public Dictionary<IntVector2, Shape.Cell> cells
+        = new Dictionary<IntVector2, Shape.Cell>();
+
+    public Play(Shape shape, IntVector2 position, int rotation)
+    {
+        foreach (var pair in shape.cells)
+        {
+            var pos = pair.Key;
+
+            for (int r = rotation; r > 0; --r)
+            {
+                int x = pos.x;
+                int y = pos.y;
+
+                pos.x = y;
+                pos.y = -x;
+            }
+
+            pos += position;
+
+            cells[pos] = pair.Value;
+        }
+    }
+}
+
 public class Shape
 {
     public enum Cell
@@ -62,30 +93,4 @@ public class Shape
 
     public Dictionary<IntVector2, Cell> cells
         = new Dictionary<IntVector2, Cell>();
-
-    public Dictionary<IntVector2, Cell> GetOriented(IntVector2 offset,
-                                                    int rotation)
-    {
-        var oriented = new Dictionary<IntVector2, Cell>();
-
-        foreach (var pair in cells)
-        {
-            var pos = pair.Key;
-
-            for (int r = rotation; r > 0; --r)
-            {
-                int x = pos.x;
-                int y = pos.y;
-
-                pos.x =  y;
-                pos.y = -x; 
-            }
-
-            pos += offset;
-
-            oriented[pos] = pair.Value;
-        }
-
-        return oriented;
-    }
 }

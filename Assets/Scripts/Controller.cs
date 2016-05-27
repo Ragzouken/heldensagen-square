@@ -15,13 +15,24 @@ public class Controller : MonoBehaviour
         public int rotation;
     }
 
-    public Color light, dark;
-    public Sprite square, border;
+    [System.Serializable]
+    public class Scheme
+    {
+        public Color light, dark;
+    }
+
+    public Scheme[] scemes;
+
+    public new CameraController camera;
+    public Color back;
+    public Sprite square, border, grid;
 
     public Transform cellParent;
     public Image cellPrefab;
 
     private MonoBehaviourPooler<Cell, Image> test_cells;
+
+    private List<Play> plays = new List<Play>();
 
     private void Awake()
     {
@@ -46,29 +57,27 @@ public class Controller : MonoBehaviour
         IntVector2.Up,
     };
 
-    private IEnumerator Start()
+    private void Update()
     {
-        while (true)
+        if (Input.GetMouseButtonDown(0))
         {
-            Reset();
-
-            yield return new WaitForSeconds(2);
+            RandomPlay();
         }
     }
 
-    private IEnumerable<Cell> Edges(Dictionary<IntVector2, Shape.Cell> cells)
+    private IEnumerable<Cell> Edges(Play play, Scheme scheme)
     {
-        foreach (var cell in cells.Keys)
+        foreach (var cell in play.cells.Keys)
         {
             for (int d = 0; d < 4; ++d)
             {
-                if (!cells.ContainsKey(cell + directions[d]))
+                if (!play.cells.ContainsKey(cell + directions[d]))
                 {
                     yield return new Cell
                     {
                         position = cell,
                         rotation = d,
-                        color = light,
+                        color = scheme.light,
                         sprite = border,
                     };
                 }
@@ -76,26 +85,43 @@ public class Controller : MonoBehaviour
         }
     }
 
-    private void Update()
+    private void Refresh()
     {
-        int r = Mathf.FloorToInt(Time.timeSinceLevelLoad * 4) % 4;
-        var oriented = shape.GetOriented(IntVector2.Zero, r);
-
-        var things = oriented.Keys.Select(p => new Cell
+        /*
+        var things = Enumerable.Range(-4, 9).SelectMany(x => Enumerable.Range(-4, 9), (x, y) => new Cell
         {
-            position = p,
-            color = dark,
-            sprite = square,
+            position = new IntVector2(x, y),
+            color = back,
+            sprite = grid,
         });
+        */
 
-        things = things.Concat(Edges(oriented));
+        var covered = new HashSet<IntVector2>();
+        var cells = new List<Cell>();
 
-        test_cells.SetActive(things, sort: true);
+        int i = plays.Count;
+
+        foreach (Play play in plays.Reverse<Play>())
+        {
+            Scheme scheme = scemes[i-- % scemes.Length];
+
+            var uncovered = play.cells.Keys.Where(p => !covered.Contains(p));
+
+            cells.AddRange(Edges(play, scheme).Where(c => !covered.Contains(c.position)));
+            cells.AddRange(uncovered.Select(p => new Cell
+            {
+                position = p,
+                color = scheme.dark,
+                sprite = square,
+            }));
+
+            covered.UnionWith(uncovered);
+        }
+
+        test_cells.SetActive(cells.Reverse<Cell>(), sort: true);
     }
 
-    private Shape shape;
-
-    private void Reset()
+    private void RandomPlay()
     {
         var shape = new Shape();
         var current = IntVector2.Zero;
@@ -122,14 +148,22 @@ public class Controller : MonoBehaviour
             current += direction;
         }
 
-        var center = new IntVector2((min.x + max.x) / 2,
-                                    (min.y + max.y) / 2);
+        var center = new IntVector2(Mathf.RoundToInt((min.x + max.x) / 2f),
+                                    Mathf.RoundToInt((min.y + max.y) / 2f));
 
-        this.shape = new Shape();
+        var copy = new Dictionary<IntVector2, Shape.Cell>(shape.cells);
 
-        foreach (var pair in shape.cells)
+        shape.cells.Clear();
+
+        foreach (var pair in copy)
         {
-            this.shape.cells[pair.Key - center] = pair.Value;
+            shape.cells[pair.Key - center] = pair.Value;
         }
+
+        var position = camera.ScreenToWorld(Input.mousePosition) / 16;
+
+        plays.Add(new Play(shape, position, Random.Range(0, 4)));
+
+        Refresh();
     }
 }
