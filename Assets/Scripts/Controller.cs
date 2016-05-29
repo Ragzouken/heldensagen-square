@@ -13,24 +13,19 @@ public class Controller : MonoBehaviour
         public Sprite sprite;
         public Color color;
         public int rotation;
+        public int depth;
     }
 
-    [System.Serializable]
-    public class Scheme
-    {
-        public Color light, dark;
-    }
-
-    public Scheme[] scemes;
+    public Fleet[] fleets;
 
     public new CameraController camera;
     public Color back;
     public Sprite square, border, grid;
 
     public Transform cellParent;
-    public Image cellPrefab;
+    public SpriteRenderer cellPrefab;
 
-    private MonoBehaviourPooler<Cell, Image> test_cells;
+    private MonoBehaviourPooler<Cell, SpriteRenderer> test_cells;
 
     private List<Play> plays = new List<Play>();
 
@@ -47,14 +42,14 @@ public class Controller : MonoBehaviour
 
     private void Awake()
     {
-        test_cells = new MonoBehaviourPooler<Cell, Image>(cellPrefab,
-                                                          cellParent,
-                                                          InitTestCell);
+        test_cells = new MonoBehaviourPooler<Cell, SpriteRenderer>(cellPrefab,
+                                                                   cellParent,
+                                                                   InitTestCell);
     }
 
-    private void InitTestCell(Cell cell, Image image)
+    private void InitTestCell(Cell cell, SpriteRenderer image)
     {
-        image.transform.localPosition = cell.position * 16 + IntVector2.One * 8;
+        image.transform.localPosition = ((Vector3) (cell.position * 16 + IntVector2.One * 8)) + Vector3.back * cell.depth;
         image.transform.localRotation = Quaternion.Euler(0, 0, 90 * -cell.rotation);
         image.sprite = cell.sprite;
         image.color = cell.color;
@@ -84,7 +79,7 @@ public class Controller : MonoBehaviour
         Refresh();
     }
 
-    private IEnumerable<Cell> Edges(Play play, Scheme scheme)
+    private IEnumerable<Cell> Edges(Play play, Fleet scheme, int depth)
     {
         foreach (var cell in play.cells.Keys)
         {
@@ -98,25 +93,20 @@ public class Controller : MonoBehaviour
                         rotation = d,
                         color = scheme.light,
                         sprite = border,
+                        depth = depth,
                     };
                 }
             }
         }
     }
 
+    private HashSet<IntVector2> covered = new HashSet<IntVector2>();
+    private List<Cell> cells = new List<Cell>();
+
     private void Refresh()
     {
-        /*
-        var things = Enumerable.Range(-4, 9).SelectMany(x => Enumerable.Range(-4, 9), (x, y) => new Cell
-        {
-            position = new IntVector2(x, y),
-            color = back,
-            sprite = grid,
-        });
-        */
-
-        var covered = new HashSet<IntVector2>();
-        var cells = new List<Cell>();
+        covered.Clear();
+        cells.Clear();
 
         int i = plays.Count;
 
@@ -129,22 +119,23 @@ public class Controller : MonoBehaviour
 
         foreach (Play play in test.Reverse<Play>())
         {
-            Scheme scheme = scemes[i-- % scemes.Length];
+            Fleet scheme = fleets[i-- % fleets.Length];
 
             var uncovered = play.cells.Keys.Where(p => !covered.Contains(p));
 
-            cells.AddRange(Edges(play, scheme).Where(c => !covered.Contains(c.position)));
+            cells.AddRange(Edges(play, scheme, i * 2 + 1).Where(c => !covered.Contains(c.position)));
             cells.AddRange(uncovered.Select(p => new Cell
             {
                 position = p,
                 color = scheme.dark,
                 sprite = square,
+                depth = i * 2,
             }));
 
             covered.UnionWith(uncovered);
         }
 
-        test_cells.SetActive(cells.Reverse<Cell>(), sort: true);
+        test_cells.SetActive(cells.Reverse<Cell>(), sort: false);
     }
 
     private void Randomise()

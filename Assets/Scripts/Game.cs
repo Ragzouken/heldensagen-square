@@ -39,18 +39,15 @@ public class Combat
 
 } 
 
+[System.Serializable]
 public class Fleet
 {
-    
-
-    public void Copy(Copier copier, Fleet copy)
-    {
-
-    }
+    public Color dark, light;
 }
 
 public class Play
 {
+    public Fleet fleet;
     public Shape shape;
     public IntVector2 position;
     public int rotation;
