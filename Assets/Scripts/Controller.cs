@@ -37,6 +37,14 @@ public class Controller : MonoBehaviour
     private int rotation;
     private Shape shape;
 
+    public static bool overUI
+    {
+        get
+        {
+            return UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject();
+        }
+    }
+
     private void Awake()
     {
         test_cells = new MonoBehaviourPooler<Cell, Image>(cellPrefab,
@@ -46,7 +54,7 @@ public class Controller : MonoBehaviour
 
     private void InitTestCell(Cell cell, Image image)
     {
-        image.transform.localPosition = cell.position * 16;
+        image.transform.localPosition = cell.position * 16 + IntVector2.One * 8;
         image.transform.localRotation = Quaternion.Euler(0, 0, 90 * -cell.rotation);
         image.sprite = cell.sprite;
         image.color = cell.color;
@@ -67,7 +75,7 @@ public class Controller : MonoBehaviour
 
     private void Update()
     {
-        if (Input.GetMouseButtonDown(0))
+        if (Input.GetMouseButtonDown(0) && !overUI)
         {
             Play();
             Randomise();
@@ -113,6 +121,9 @@ public class Controller : MonoBehaviour
         int i = plays.Count;
 
         var position = camera.ScreenToWorld(Input.mousePosition) / 16;
+
+        position.x = Mathf.Floor(position.x);
+        position.y = Mathf.Floor(position.y);
 
         var test = plays.Concat(new[] { new Play(shape, position, rotation) });
 
@@ -180,8 +191,21 @@ public class Controller : MonoBehaviour
     {
         var position = camera.ScreenToWorld(Input.mousePosition) / 16;
 
+        position.x = Mathf.Floor(position.x);
+        position.y = Mathf.Floor(position.y);
+
         plays.Add(new Play(shape, position, rotation));
 
         Refresh();
+    }
+
+    public void RotateRight()
+    {
+        rotation = (rotation + 1) % 4;
+    }
+
+    public void RotateLeft()
+    {
+        rotation = (rotation + 4 - 1) % 4;
     }
 }
