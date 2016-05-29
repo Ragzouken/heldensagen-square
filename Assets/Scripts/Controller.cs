@@ -34,6 +34,9 @@ public class Controller : MonoBehaviour
 
     private List<Play> plays = new List<Play>();
 
+    private int rotation;
+    private Shape shape;
+
     private void Awake()
     {
         test_cells = new MonoBehaviourPooler<Cell, Image>(cellPrefab,
@@ -57,12 +60,20 @@ public class Controller : MonoBehaviour
         IntVector2.Up,
     };
 
+    private void Start()
+    {
+        Randomise();
+    }
+
     private void Update()
     {
         if (Input.GetMouseButtonDown(0))
         {
-            RandomPlay();
+            Play();
+            Randomise();
         }
+
+        Refresh();
     }
 
     private IEnumerable<Cell> Edges(Play play, Scheme scheme)
@@ -101,7 +112,11 @@ public class Controller : MonoBehaviour
 
         int i = plays.Count;
 
-        foreach (Play play in plays.Reverse<Play>())
+        var position = camera.ScreenToWorld(Input.mousePosition) / 16;
+
+        var test = plays.Concat(new[] { new Play(shape, position, rotation) });
+
+        foreach (Play play in test.Reverse<Play>())
         {
             Scheme scheme = scemes[i-- % scemes.Length];
 
@@ -121,9 +136,9 @@ public class Controller : MonoBehaviour
         test_cells.SetActive(cells.Reverse<Cell>(), sort: true);
     }
 
-    private void RandomPlay()
+    private void Randomise()
     {
-        var shape = new Shape();
+        shape = new Shape();
         var current = IntVector2.Zero;
 
         var min = IntVector2.Zero;
@@ -159,10 +174,13 @@ public class Controller : MonoBehaviour
         {
             shape.cells[pair.Key - center] = pair.Value;
         }
+    }
 
+    private void Play()
+    {
         var position = camera.ScreenToWorld(Input.mousePosition) / 16;
 
-        plays.Add(new Play(shape, position, Random.Range(0, 4)));
+        plays.Add(new Play(shape, position, rotation));
 
         Refresh();
     }
