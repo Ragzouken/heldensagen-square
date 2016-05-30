@@ -109,7 +109,7 @@ public class Controller : MonoBehaviour
         }
     }
 
-    private HashSet<IntVector2> covered = new HashSet<IntVector2>();
+    private Dictionary<IntVector2, Fleet> covered = new Dictionary<IntVector2, Fleet>();
     private List<Cell> cells = new List<Cell>();
 
     private int turn = 0;
@@ -134,9 +134,9 @@ public class Controller : MonoBehaviour
         {
             i -= 1;
 
-            var uncovered = play.cells.Keys.Where(p => !covered.Contains(p));
+            var uncovered = play.cells.Keys.Where(p => !covered.ContainsKey(p));
 
-            cells.AddRange(Edges(play, i * 2 + 1).Where(c => !covered.Contains(c.position)));
+            cells.AddRange(Edges(play, i * 2 + 1).Where(c => !covered.ContainsKey(c.position)));
             cells.AddRange(uncovered.Select(p => new Cell
             {
                 position = p,
@@ -145,10 +145,15 @@ public class Controller : MonoBehaviour
                 depth = i * 2,
             }));
 
-            covered.UnionWith(uncovered);
+            foreach (var cell in uncovered) covered.Add(cell, play.fleet);
         }
 
         test_cells.SetActive(cells.Reverse<Cell>(), sort: false);
+
+        foreach (Fleet fleet_ in fleets)
+        {
+            fleet_.ships = covered.Count(pair => pair.Value == fleet_);
+        }
 
         fleetCounts.SetActive(fleets);
         fleetCounts.MapActive((f, p) => p.Refresh());
