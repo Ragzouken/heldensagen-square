@@ -27,6 +27,11 @@ public class Controller : MonoBehaviour
 
     private MonoBehaviourPooler<Cell, SpriteRenderer> test_cells;
 
+    public FleetCountPanel fleetCountPrefab;
+    public Transform fleetCountParent;
+
+    private MonoBehaviourPooler<Fleet, FleetCountPanel> fleetCounts;    
+
     private List<Play> plays = new List<Play>();
 
     private int rotation;
@@ -45,6 +50,10 @@ public class Controller : MonoBehaviour
         test_cells = new MonoBehaviourPooler<Cell, SpriteRenderer>(cellPrefab,
                                                                    cellParent,
                                                                    InitTestCell);
+
+        fleetCounts = new MonoBehaviourPooler<Fleet, FleetCountPanel>(fleetCountPrefab,
+                                                                      fleetCountParent,
+                                                                      (f, p) => p.SetFleet(f));
     }
 
     private void InitTestCell(Cell cell, SpriteRenderer image)
@@ -79,7 +88,7 @@ public class Controller : MonoBehaviour
         Refresh();
     }
 
-    private IEnumerable<Cell> Edges(Play play, Fleet scheme, int depth)
+    private IEnumerable<Cell> Edges(Play play, int depth)
     {
         foreach (var cell in play.cells.Keys)
         {
@@ -91,7 +100,7 @@ public class Controller : MonoBehaviour
                     {
                         position = cell,
                         rotation = d,
-                        color = scheme.light,
+                        color = play.fleet.light,
                         sprite = border,
                         depth = depth,
                     };
@@ -103,31 +112,35 @@ public class Controller : MonoBehaviour
     private HashSet<IntVector2> covered = new HashSet<IntVector2>();
     private List<Cell> cells = new List<Cell>();
 
+    private int turn = 0;
+
     private void Refresh()
     {
         covered.Clear();
         cells.Clear();
 
-        int i = plays.Count;
+        var fleet = fleets[turn];
+
+        int i = plays.Count * 2;
 
         var position = camera.ScreenToWorld(Input.mousePosition) / 16;
 
         position.x = Mathf.Floor(position.x);
         position.y = Mathf.Floor(position.y);
 
-        var test = plays.Concat(new[] { new Play(shape, position, rotation) });
+        var test = plays.Concat(new[] { new Play(fleet, shape, position, rotation) });
 
         foreach (Play play in test.Reverse<Play>())
         {
-            Fleet scheme = fleets[i-- % fleets.Length];
+            i -= 1;
 
             var uncovered = play.cells.Keys.Where(p => !covered.Contains(p));
 
-            cells.AddRange(Edges(play, scheme, i * 2 + 1).Where(c => !covered.Contains(c.position)));
+            cells.AddRange(Edges(play, i * 2 + 1).Where(c => !covered.Contains(c.position)));
             cells.AddRange(uncovered.Select(p => new Cell
             {
                 position = p,
-                color = scheme.dark,
+                color = play.fleet.dark,
                 sprite = square,
                 depth = i * 2,
             }));
@@ -136,6 +149,9 @@ public class Controller : MonoBehaviour
         }
 
         test_cells.SetActive(cells.Reverse<Cell>(), sort: false);
+
+        fleetCounts.SetActive(fleets);
+        fleetCounts.MapActive((f, p) => p.Refresh());
     }
 
     private void Randomise()
@@ -180,12 +196,16 @@ public class Controller : MonoBehaviour
 
     private void Play()
     {
+        var fleet = fleets[turn];
+
         var position = camera.ScreenToWorld(Input.mousePosition) / 16;
 
         position.x = Mathf.Floor(position.x);
         position.y = Mathf.Floor(position.y);
 
-        plays.Add(new Play(shape, position, rotation));
+        plays.Add(new Play(fleet, shape, position, rotation));
+
+        turn = (turn + 1) % fleets.Length;
 
         Refresh();
     }

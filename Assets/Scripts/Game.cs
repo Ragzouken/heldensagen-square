@@ -42,6 +42,8 @@ public class Combat
 [System.Serializable]
 public class Fleet
 {
+    public string name;
+    public int ships;
     public Color dark, light;
 }
 
@@ -55,8 +57,10 @@ public class Play
     public Dictionary<IntVector2, Shape.Cell> cells
         = new Dictionary<IntVector2, Shape.Cell>();
 
-    public Play(Shape shape, IntVector2 position, int rotation)
+    public Play(Fleet fleet, Shape shape, IntVector2 position, int rotation)
     {
+        this.fleet = fleet;
+
         foreach (var pair in shape.cells)
         {
             var pos = pair.Key;
