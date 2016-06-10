@@ -20,7 +20,7 @@ public class Controller : MonoBehaviour
 
     public new CameraController camera;
     public Color back;
-    public Sprite square, border, grid;
+    public Sprite square, border, grid, connect;
 
     public Transform cellParent;
     public SpriteRenderer cellPrefab;
@@ -75,26 +75,57 @@ public class Controller : MonoBehaviour
     private void Start()
     {
         Randomise();
+
+        foreach (Fleet fleet in fleets)
+        {
+            var square = new Shape();
+            square.cells.Add(IntVector2.Zero, Shape.Cell.Connect);
+
+            var position = new IntVector2(Random.Range(-4, 5), Random.Range(-4, 5));
+
+            plays.Add(new Play(fleet, square, position, 0));
+        }
     }
 
     private void Update()
     {
-        if (Input.GetMouseButtonDown(0) && !overUI)
+        if (!overUI)
         {
-            Play();
-            Randomise();
+            if (Input.GetMouseButtonDown(0))
+            {
+                Play();
+                Randomise();
+            }
+            else if (Input.GetMouseButtonDown(1))
+            {
+                RotateRight();
+            }
         }
+
+        
 
         Refresh();
     }
 
-    private IEnumerable<Cell> Edges(Play play, int depth)
+    private IEnumerable<Cell> Edges(Play play, int depth, Dictionary<IntVector2, Fleet> covered)
     {
-        foreach (var cell in play.cells.Keys)
+        foreach (var cell in play.cells.Keys.Where(c => !covered.ContainsKey(c)))
         {
+            if (play.cells[cell] == Shape.Cell.Connect)
+            {
+                yield return new Cell
+                {
+                    position = cell,
+                    color = play.fleet.light,
+                    sprite = connect,
+                    depth = depth,
+                };
+            }
+
             for (int d = 0; d < 4; ++d)
             {
-                if (!play.cells.ContainsKey(cell + directions[d]))
+                if (!play.cells.ContainsKey(cell + directions[d])
+                 && !covered.ContainsKey(cell + directions[d]))
                 {
                     yield return new Cell
                     {
@@ -116,6 +147,8 @@ public class Controller : MonoBehaviour
 
     private void Refresh()
     {
+
+
         covered.Clear();
         cells.Clear();
 
@@ -130,22 +163,28 @@ public class Controller : MonoBehaviour
 
         var test = plays.Concat(new[] { new Play(fleet, shape, position, rotation) });
 
+        bool first = true;
+
         foreach (Play play in test.Reverse<Play>())
         {
+            bool invalid = first && !CanPlay(play);
+
             i -= 1;
 
             var uncovered = play.cells.Keys.Where(p => !covered.ContainsKey(p));
 
-            cells.AddRange(Edges(play, i * 2 + 1).Where(c => !covered.ContainsKey(c.position)));
+            cells.AddRange(Edges(play, i * 2 + 1, covered).Where(c => !covered.ContainsKey(c.position)));
             cells.AddRange(uncovered.Select(p => new Cell
             {
                 position = p,
-                color = play.fleet.dark,
+                color = invalid ? Color.gray : play.fleet.dark,
                 sprite = square,
                 depth = i * 2,
             }));
 
             foreach (var cell in uncovered) covered.Add(cell, play.fleet);
+
+            first = false;
         }
 
         test_cells.SetActive(cells.Reverse<Cell>(), sort: false);
@@ -157,6 +196,26 @@ public class Controller : MonoBehaviour
 
         fleetCounts.SetActive(fleets);
         fleetCounts.MapActive((f, p) => p.Refresh());
+    }
+
+    public bool CanPlay(Play play)
+    {
+        var covered = new Dictionary<IntVector2, Fleet>();
+        var symbol = new Dictionary<IntVector2, Shape.Cell>();
+
+        foreach (Play play_ in plays.Reverse<Play>())
+        {
+            foreach (IntVector2 cell in play_.cells.Keys)
+            {
+                if (!covered.ContainsKey(cell))
+                {
+                    covered[cell] = play_.fleet;
+                    symbol[cell] = play_.cells[cell];
+                }
+            }
+        }
+
+        return play.cells.Keys.Any(c => covered.ContainsKey(c) && covered[c] == play.fleet && symbol[c] == Shape.Cell.Connect);
     }
 
     private void Randomise()
@@ -186,6 +245,12 @@ public class Controller : MonoBehaviour
             current += direction;
         }
 
+        for (int i = 0; i < 2; ++i)
+        {
+            var key = shape.cells.Keys.RandomElement();
+            shape.cells[key] = Shape.Cell.Connect;
+        }
+
         var center = new IntVector2(Mathf.RoundToInt((min.x + max.x) / 2f),
                                     Mathf.RoundToInt((min.y + max.y) / 2f));
 
@@ -208,7 +273,12 @@ public class Controller : MonoBehaviour
         position.x = Mathf.Floor(position.x);
         position.y = Mathf.Floor(position.y);
 
-        plays.Add(new Play(fleet, shape, position, rotation));
+        var play = new Play(fleet, shape, position, rotation);
+
+        if (!CanPlay(play))
+            return;
+
+        plays.Add(play);
 
         turn = (turn + 1) % fleets.Length;
 
