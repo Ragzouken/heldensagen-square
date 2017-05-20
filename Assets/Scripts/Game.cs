@@ -33,7 +33,7 @@ public class Game
 {
 }
 
-public class Combat
+public class Battle
 {
     public Fleet[] fleets;
 

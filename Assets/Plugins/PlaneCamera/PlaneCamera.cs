@@ -142,7 +142,7 @@ public class PlaneCamera : MonoBehaviour
     {
         ClampTargets();
 
-        focus = Vector2.SmoothDamp(focus, focusTarget, ref focusVelocity, focusTime);
+        focus = Vector2.SmoothDamp(focus, focusTarget, ref focusVelocity, focusTime, 1000, Time.deltaTime);
         pivot = Mathf.SmoothDamp(pivot, pivotTarget, ref pivotVelocity, pivotTime);
         depth = Mathf.SmoothDamp(depth, depthTarget, ref depthVelocity, depthTime);
         angle = Mathf.SmoothDampAngle(angle, angleTarget, ref angleVelocity, angleTime);
