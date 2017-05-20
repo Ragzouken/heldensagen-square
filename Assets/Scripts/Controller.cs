@@ -22,6 +22,8 @@ public class Controller : MonoBehaviour
     public Color back;
     public Sprite square, border, grid, connect;
 
+    public List<Sprite> healthSprites;
+
     public Transform cellParent;
     public SpriteRenderer cellPrefab;
 
@@ -111,17 +113,20 @@ public class Controller : MonoBehaviour
     {
         foreach (var cell in play.cells.Keys.Where(c => !covered.ContainsKey(c)))
         {
-            if (play.cells[cell] == Shape.Cell.Connect)
+            //if (play.cells[cell] == Shape.Cell.Connect)
             {
+                int test = Mathf.Abs((cell.x + 23 * cell.y * 17) % 4);
+
                 yield return new Cell
                 {
                     position = cell,
                     color = play.fleet.light,
-                    sprite = connect,
+                    sprite = healthSprites[test],
                     depth = depth,
                 };
             }
 
+            ///*
             for (int d = 0; d < 4; ++d)
             {
                 if (!play.cells.ContainsKey(cell + directions[d])
@@ -137,6 +142,7 @@ public class Controller : MonoBehaviour
                     };
                 }
             }
+            //*/
         }
     }
 
